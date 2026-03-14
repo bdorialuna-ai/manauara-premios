@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manauara — Gerar PDF Cartões</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root { --green:#1a3a2a; --lime:#b5d44a; --cream:#f7f2e8; --orange:#e85d2f; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'DM Sans',sans-serif; background:var(--cream); min-height:100vh; }
+
+  nav { background:var(--green); padding:16px 32px; display:flex; align-items:center; gap:16px; }
+  .logo { font-family:'Playfair Display',serif; color:var(--lime); font-size:1.3rem; }
+  .logo span { color:rgba(255,255,255,0.5); font-family:'DM Sans',sans-serif; font-size:0.8rem; font-weight:400; margin-left:8px; }
+
+  .container { max-width:900px; margin:0 auto; padding:40px 24px; }
+  h1 { font-family:'Playfair Display',serif; color:var(--green); font-size:2rem; margin-bottom:8px; }
+  .sub { color:#888; margin-bottom:40px; font-size:0.95rem; }
+
+  .card { background:white; border-radius:20px; padding:32px; margin-bottom:24px; box-shadow:0 2px 20px rgba(0,0,0,0.06); }
+  .card-title { font-family:'Playfair Display',serif; color:var(--green); font-size:1.2rem; margin-bottom:20px; padding-bottom:12px; border-bottom:2px solid var(--lime); }
+
+  /* Upload area */
+  .upload-area {
+    border:2px dashed #d0c8b8;
+    border-radius:16px;
+    padding:40px;
+    text-align:center;
+    cursor:pointer;
+    transition:all 0.2s;
+    position:relative;
+  }
+  .upload-area:hover { border-color:var(--lime); background:#fafff5; }
+  .upload-area input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .upload-icon { font-size:2.5rem; margin-bottom:12px; }
+  .upload-text { color:#888; font-size:0.95rem; }
+  .upload-text strong { color:var(--green); }
+  .upload-preview { max-width:100%; max-height:200px; border-radius:12px; margin-top:16px; display:none; }
+
+  /* Position controls */
+  .controls-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+  .field { display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:0.8rem; color:#666; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; }
+  .field input[type=range] { accent-color:var(--green); }
+  .field input[type=number] { padding:8px 12px; border:1.5px solid #e0e0e0; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; }
+  .field input[type=number]:focus { border-color:var(--lime); }
+  .val-display { font-size:0.85rem; color:var(--green); font-weight:600; }
+
+  /* Preview canvas */
+  .preview-wrap { position:relative; display:inline-block; margin-top:20px; }
+  #preview-canvas { border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15); max-width:100%; cursor:crosshair; }
+  .preview-label { font-size:0.8rem; color:#888; margin-top:8px; text-align:center; }
+
+  /* Stats */
+  .stats-row { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px; }
+  .stat { background:var(--green); border-radius:14px; padding:16px 24px; color:white; flex:1; min-width:140px; text-align:center; }
+  .stat-n { font-family:'Playfair Display',serif; font-size:2rem; color:var(--lime); line-height:1; }
+  .stat-l { font-size:0.75rem; color:rgba(255,255,255,0.6); margin-top:4px; }
+
+  /* Buttons */
+  .btn-primary { padding:14px 32px; background:var(--green); color:var(--lime); border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:1rem; cursor:pointer; transition:all 0.2s; }
+  .btn-primary:hover { background:#0f2a1a; transform:translateY(-1px); }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+  .btn-secondary { padding:12px 24px; background:var(--lime); color:var(--green); border:none; border-radius:12px; font-family:'DM Sans',sans-serif; font-weight:700; font-size:0.9rem; cursor:pointer; transition:all 0.2s; }
+  .btn-secondary:hover { background:#a8c63c; }
+
+  /* Progress */
+  .progress-wrap { display:none; margin-top:20px; }
+  .progress-bar { background:#e0e0e0; border-radius:100px; height:10px; overflow:hidden; margin-bottom:8px; }
+  .progress-fill { background:var(--lime); height:100%; border-radius:100px; transition:width 0.3s; width:0%; }
+  .progress-text { font-size:0.85rem; color:#888; }
+
+  .alert { padding:14px 18px; border-radius:12px; font-size:0.88rem; margin-bottom:16px; }
+  .alert-warn { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+  .alert-success { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+  .alert-info { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+
+  .no-data { text-align:center; padding:48px; color:#aaa; }
+  .no-data .icon { font-size:3rem; margin-bottom:12px; }
+
+  /* Hidden QR render area */
+  #qr-render { position:absolute; left:-9999px; top:-9999px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Manauara <span>— Gerador de PDF</span></div>
+</nav>
+
+<div id="qr-render"></div>
+
+<div class="container">
+  <h1>Gerar PDF dos Cartões</h1>
+  <p class="sub">Carrega a arte do Canva e posiciona o QR code. O PDF vai ser gerado com todos os cartões automaticamente.</p>
+
+  <!-- Stats from localStorage -->
+  <div id="stats-section"></div>
+
+  <!-- Step 1: Upload art -->
+  <div class="card">
+    <div class="card-title">1. Carrega a arte do Canva (PDF ou imagem)</div>
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="art-file" accept=".pdf,.png,.jpg,.jpeg" onchange="handleFileUpload(event)">
+      <div class="upload-icon">🎨</div>
+      <div class="upload-text">Arrasta o ficheiro aqui ou <strong>clica para selecionar</strong><br><small>PDF, PNG ou JPG</small></div>
+      <img id="upload-preview" class="upload-preview">
+    </div>
+  </div>
+
+  <!-- Step 2: Position QR -->
+  <div class="card" id="position-card" style="display:none">
+    <div class="card-title">2. Posiciona o QR code na arte</div>
+    <p style="font-size:0.88rem;color:#888;margin-bottom:16px;">Clica na arte para definir o centro do QR code, ou usa os controlos abaixo.</p>
+
+    <div class="controls-grid">
+      <div class="field">
+        <label>Posição X (da esquerda) <span class="val-display" id="x-val">68%</span></label>
+        <input type="range" id="qr-x" min="0" max="100" value="68" oninput="updatePreview()">
+      </div>
+      <div class="field">
+        <label>Posição Y (de cima) <span class="val-display" id="y-val">58%</span></label>
+        <input type="range" id="qr-y" min="0" max="100" value="58" oninput="updatePreview()">
+      </div>
+      <div class="field">
+        <label>Tamanho do QR <span class="val-display" id="size-val">28%</span></label>
+        <input type="range" id="qr-size" min="5" max="60" value="28" oninput="updatePreview()">
+      </div>
+    </div>
+
+    <div style="text-align:center;">
+      <div class="preview-wrap">
+        <canvas id="preview-canvas" onclick="handleCanvasClick(event)"></canvas>
+      </div>
+      <p class="preview-label">👆 Clica na arte para posicionar o QR code</p>
+    </div>
+  </div>
+
+  <!-- Step 3: Generate -->
+  <div class="card" id="generate-card" style="display:none">
+    <div class="card-title">3. Gerar PDF</div>
+
+    <div class="controls-grid" style="margin-bottom:20px;">
+      <div class="field">
+        <label>Cartões por página</label>
+        <select id="cards-per-page" onchange="updateLayout()" style="padding:8px 12px;border:1.5px solid #e0e0e0;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
+          <option value="1">1 por página</option>
+          <option value="2">2 por página</option>
+          <option value="4" selected>4 por página (2x2)</option>
+          <option value="8">8 por página (2x4)</option>
+          <option value="10">10 por página (2x5)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Nº de cartões a gerar</label>
+        <input type="number" id="gen-count" value="400" min="1">
+      </div>
+    </div>
+
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-text" id="progress-text">A gerar...</div>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      <button class="btn-primary" id="gen-btn" onclick="generatePDF()">📄 Gerar PDF</button>
+      <span style="font-size:0.85rem;color:#aaa;" id="gen-info"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+let artImage = null; // base64
+let artWidth = 0;
+let artHeight = 0;
+let qrCodes = [];
+let sampleQRDataUrl = null;
+
+// ========== LOAD DATA ==========
+function loadQRCodes() {
+  try {
+    const data = localStorage.getItem('manauara_qrcodes');
+    if(data) qrCodes = JSON.parse(data);
+  } catch(e) {}
+
+  const section = document.getElementById('stats-section');
+  if(qrCodes.length === 0) {
+    section.innerHTML = `
+      <div class="alert alert-warn">⚠️ Nenhum QR code encontrado. Certifica-te que estás a abrir esta página no <strong>mesmo browser e dispositivo</strong> onde geráste os QR codes no painel admin.</div>
+    `;
+  } else {
+    const winners = qrCodes.filter(q => q.prize).length;
+    section.innerHTML = `
+      <div class="alert alert-success">✅ ${qrCodes.length} QR codes carregados com sucesso!</div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-n">${qrCodes.length}</div><div class="stat-l">Total de Cartões</div></div>
+        <div class="stat"><div class="stat-n">${winners}</div><div class="stat-l">Com Prémio</div></div>
+        <div class="stat"><div class="stat-n">${qrCodes.length - winners}</div><div class="stat-l">Sem Prémio</div></div>
+      </div>
+    `;
+    document.getElementById('gen-count').value = qrCodes.length;
+  }
+}
+
+// ========== FILE UPLOAD ==========
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+
+  if(file.type === 'application/pdf') {
+    // Convert PDF page to image using PDF.js
+    reader.onload = async function(ev) {
+      try {
+        // Load pdf.js dynamically
+        if(!window.pdfjsLib) {
+          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+        const pdf = await pdfjsLib.getDocument({data: ev.target.result}).promise;
+        const page = await pdf.getPage(1);
+        const scale = 2;
+        const viewport = page.getViewport({scale});
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({canvasContext: ctx, viewport}).promise;
+        artImage = canvas.toDataURL('image/jpeg', 0.95);
+        artWidth = canvas.width;
+        artHeight = canvas.height;
+        showArtPreview();
+      } catch(err) {
+        alert('Erro ao ler o PDF. Tenta exportar como PNG do Canva e carrega a imagem.');
+        console.error(err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.onload = function(ev) {
+      const img = new Image();
+      img.onload = function() {
+        artImage = ev.target.result;
+        artWidth = img.width;
+        artHeight = img.height;
+        showArtPreview();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function showArtPreview() {
+  const preview = document.getElementById('upload-preview');
+  preview.src = artImage;
+  preview.style.display = 'block';
+
+  document.getElementById('position-card').style.display = 'block';
+  document.getElementById('generate-card').style.display = 'block';
+
+  // Generate sample QR for preview
+  generateSampleQR().then(() => updatePreview());
+}
+
+// ========== SAMPLE QR ==========
+async function generateSampleQR() {
+  return new Promise(resolve => {
+    const container = document.getElementById('qr-render');
+    container.innerHTML = '';
+    const div = document.createElement('div');
+    container.appendChild(div);
+    const sampleUrl = qrCodes.length > 0
+      ? `${qrCodes[0].baseUrl || 'https://bdorialuna-ai.github.io/manauara-premios/'}?code=${qrCodes[0].code}&prize=${encodeURIComponent(qrCodes[0].prize ? qrCodes[0].prize.name : 'none')}&emoji=${encodeURIComponent(qrCodes[0].prize ? qrCodes[0].prize.emoji : '')}`
+      : 'https://bdorialuna-ai.github.io/manauara-premios/?code=MNR-DEMO';
+    new QRCode(div, { text: sampleUrl, width: 200, height: 200, colorDark:'#1a1a1a', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    setTimeout(() => {
+      const img = div.querySelector('img') || div.querySelector('canvas');
+      if(img) {
+        if(img.tagName === 'IMG') {
+          sampleQRDataUrl = img.src;
+        } else {
+          sampleQRDataUrl = img.toDataURL();
+        }
+      }
+      resolve();
+    }, 300);
+  });
+}
+
+// ========== PREVIEW ==========
+function updatePreview() {
+  if(!artImage) return;
+  const canvas = document.getElementById('preview-canvas');
+  const ctx = canvas.getContext('2d');
+
+  const maxW = Math.min(700, window.innerWidth - 80);
+  const scale = maxW / artWidth;
+  canvas.width = artWidth * scale;
+  canvas.height = artHeight * scale;
+
+  const img = new Image();
+  img.onload = function() {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Draw QR overlay
+    const xPct = parseFloat(document.getElementById('qr-x').value) / 100;
+    const yPct = parseFloat(document.getElementById('qr-y').value) / 100;
+    const sizePct = parseFloat(document.getElementById('qr-size').value) / 100;
+
+    document.getElementById('x-val').textContent = Math.round(xPct*100) + '%';
+    document.getElementById('y-val').textContent = Math.round(yPct*100) + '%';
+    document.getElementById('size-val').textContent = Math.round(sizePct*100) + '%';
+
+    const qrSize = canvas.width * sizePct;
+    const qrX = canvas.width * xPct - qrSize/2;
+    const qrY = canvas.height * yPct - qrSize/2;
+
+    if(sampleQRDataUrl) {
+      const qrImg = new Image();
+      qrImg.onload = function() {
+        // White background for QR
+        ctx.fillStyle = 'white';
+        ctx.fillRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8);
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        // Red crosshair
+        ctx.strokeStyle = 'rgba(232,93,47,0.8)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4,4]);
+        ctx.strokeRect(qrX - 4, qrY - 4, qrSize + 8, qrSize + 8);
+        ctx.setLineDash([]);
+      };
+      qrImg.src = sampleQRDataUrl;
+    }
+  };
+  img.src = artImage;
+}
+
+function handleCanvasClick(e) {
+  const canvas = document.getElementById('preview-canvas');
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width * 100;
+  const y = (e.clientY - rect.top) / rect.height * 100;
+  document.getElementById('qr-x').value = x.toFixed(1);
+  document.getElementById('qr-y').value = y.toFixed(1);
+  updatePreview();
+}
+
+function updateLayout() {}
+
+// ========== GENERATE PDF ==========
+async function generatePDF() {
+  if(!artImage) { alert('Carrega primeiro a arte do Canva.'); return; }
+  if(qrCodes.length === 0) { alert('Nenhum QR code encontrado. Abre esta página no mesmo dispositivo do painel admin.'); return; }
+
+  const count = Math.min(parseInt(document.getElementById('gen-count').value), qrCodes.length);
+  const cardsPerPage = parseInt(document.getElementById('cards-per-page').value);
+
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  const progressWrap = document.getElementById('progress-wrap');
+  progressWrap.style.display = 'block';
+
+  // Card dimensions in mm (85x55)
+  const cardW = 85;
+  const cardH = 55;
+
+  // Page setup
+  let pageW, pageH, cols, rows;
+  if(cardsPerPage === 1) { cols=1; rows=1; pageW=cardW+20; pageH=cardH+20; }
+  else if(cardsPerPage === 2) { cols=2; rows=1; pageW=cardW*2+30; pageH=cardH+20; }
+  else if(cardsPerPage === 4) { cols=2; rows=2; pageW=cardW*2+30; pageH=cardH*2+30; }
+  else if(cardsPerPage === 8) { cols=2; rows=4; pageW=cardW*2+30; pageH=cardH*4+50; }
+  else if(cardsPerPage === 10) { cols=2; rows=5; pageW=cardW*2+30; pageH=cardH*5+60; }
+
+  const pdf = new jsPDF({ orientation: pageW > pageH ? 'l' : 'p', unit: 'mm', format: [pageW, pageH] });
+
+  const xPct = parseFloat(document.getElementById('qr-x').value) / 100;
+  const yPct = parseFloat(document.getElementById('qr-y').value) / 100;
+  const sizePct = parseFloat(document.getElementById('qr-size').value) / 100;
+
+  const qrSizeMm = cardW * sizePct;
+  const qrXOffset = cardW * xPct - qrSizeMm/2;
+  const qrYOffset = cardH * yPct - qrSizeMm/2;
+
+  const margin = 10;
+  const gapX = (pageW - margin*2 - cardW * cols) / Math.max(1, cols - 1);
+  const gapY = (pageH - margin*2 - cardH * rows) / Math.max(1, rows - 1);
+
+  let cardIndex = 0;
+  let pageCount = 0;
+
+  while(cardIndex < count) {
+    if(pageCount > 0) pdf.addPage([pageW, pageH], pageW > pageH ? 'l' : 'p');
+    pageCount++;
+
+    for(let row = 0; row < rows && cardIndex < count; row++) {
+      for(let col = 0; col < cols && cardIndex < count; col++) {
+        const qr = qrCodes[cardIndex];
+        const cx = margin + col * (cardW + (cols > 1 ? gapX : 0));
+        const cy = margin + row * (cardH + (rows > 1 ? gapY : 0));
+
+        // Draw card background (art)
+        pdf.addImage(artImage, 'JPEG', cx, cy, cardW, cardH);
+
+        // Generate and draw QR
+        await new Promise(resolve => {
+          const container = document.getElementById('qr-render');
+          container.innerHTML = '';
+          const div = document.createElement('div');
+          container.appendChild(div);
+          const url = `${qr.baseUrl || 'https://bdorialuna-ai.github.io/manauara-premios/'}?code=${qr.code}&prize=${encodeURIComponent(qr.prize ? qr.prize.name : 'none')}&emoji=${encodeURIComponent(qr.prize ? qr.prize.emoji : '')}`;
+          new QRCode(div, { text: url, width: 200, height: 200, colorDark:'#1a1a1a', colorLight:'#ffffff', correctLevel: QRCode.CorrectLevel.M });
+          setTimeout(() => {
+            const img = div.querySelector('img') || div.querySelector('canvas');
+            if(img) {
+              const dataUrl = img.tagName === 'IMG' ? img.src : img.toDataURL();
+              // White background behind QR
+              pdf.setFillColor(255,255,255);
+              pdf.rect(cx + qrXOffset - 1, cy + qrYOffset - 1, qrSizeMm + 2, qrSizeMm + 2, 'F');
+              pdf.addImage(dataUrl, 'PNG', cx + qrXOffset, cy + qrYOffset, qrSizeMm, qrSizeMm);
+            }
+            resolve();
+          }, 150);
+        });
+
+        cardIndex++;
+
+        // Update progress
+        const pct = Math.round(cardIndex / count * 100);
+        document.getElementById('progress-fill').style.width = pct + '%';
+        document.getElementById('progress-text').textContent = `A gerar cartão ${cardIndex} de ${count}... (${pct}%)`;
+      }
+    }
+
+    // Yield to browser
+    await new Promise(r => setTimeout(r, 10));
+  }
+
+  pdf.save('manauara-cartoes-' + count + '.pdf');
+  btn.disabled = false;
+  document.getElementById('progress-text').textContent = `✅ PDF gerado com ${count} cartões! A descarregar...`;
+}
+
+// ========== INIT ==========
+loadQRCodes();
+</script>
+</body>
+</html>
