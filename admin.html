@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manauara — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --green: #1a3a2a;
+    --lime: #b5d44a;
+    --cream: #f7f2e8;
+    --orange: #e85d2f;
+    --dark: #0f1f16;
+    --gold: #c9a84c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); min-height: 100vh; overflow-x: hidden; }
+
+  /* ========== LOGIN ========== */
+  #login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--green);
+  }
+  .login-card {
+    background: var(--cream);
+    border-radius: 28px;
+    padding: 48px 40px;
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.4);
+    animation: cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes cardIn {
+    from { transform: scale(0.8) translateY(30px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .login-logo {
+    font-family: 'Playfair Display', serif;
+    color: var(--green);
+    font-size: 1.6rem;
+    margin-bottom: 6px;
+  }
+  .login-sub { font-size: 0.85rem; color: #999; margin-bottom: 32px; }
+  .login-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e0e0e0;
+    border-radius: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    outline: none;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    transition: border 0.2s;
+  }
+  .login-input:focus { border-color: var(--lime); }
+  .login-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: var(--lime);
+    border: none;
+    border-radius: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 12px;
+  }
+  .login-btn:hover { background: #0f2a1a; transform: translateY(-1px); }
+  .login-error {
+    color: var(--orange);
+    font-size: 0.82rem;
+    display: none;
+    margin-top: 4px;
+  }
+  .login-shake { animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%,60% { transform: translateX(-8px); }
+    40%,80% { transform: translateX(8px); }
+  }
+
+  /* ========== NAV ========== */
+  #app-screen { display: none; }
+  nav {
+    background: var(--green);
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: 'Playfair Display', serif; color: var(--lime); font-size: 1.4rem; letter-spacing: 0.05em; }
+  .logo span { color: var(--cream); font-size: 0.8rem; opacity: 0.6; margin-left: 8px; font-family: 'DM Sans', sans-serif; letter-spacing: 0; }
+  .logout-btn {
+    padding: 7px 16px;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .logout-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+
+  /* ========== ADMIN ========== */
+  .admin { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  .admin-title { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--green); margin-bottom: 8px; }
+  .admin-sub { color: #666; margin-bottom: 40px; font-size: 0.95rem; }
+
+  .section-card { background: white; border-radius: 20px; padding: 32px; margin-bottom: 24px; box-shadow: 0 2px 20px rgba(0,0,0,0.06); }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--green); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--lime); }
+
+  .prizes-grid { display: grid; gap: 12px; }
+  .prize-row { display: grid; grid-template-columns: 1fr 120px 120px 44px; gap: 10px; align-items: center; }
+  .prize-row input {
+    padding: 10px 14px; border: 1.5px solid #e0e0e0; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--dark); outline: none; transition: border 0.2s;
+  }
+  .prize-row input:focus { border-color: var(--lime); }
+  .col-headers { display: grid; grid-template-columns: 1fr 120px 120px 44px; gap: 10px; margin-bottom: 4px; }
+  .col-headers span { font-size: 0.75rem; color: #999; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .btn-icon { width: 40px; height: 40px; border-radius: 10px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s; }
+  .btn-remove { background: #fee2e2; color: #ef4444; }
+  .btn-remove:hover { background: #ef4444; color: white; }
+
+  .btn-add { margin-top: 12px; padding: 10px 20px; background: var(--lime); color: var(--green); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+  .btn-add:hover { background: #a8c63c; transform: translateY(-1px); }
+
+  .gen-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label { font-size: 0.8rem; color: #666; font-weight: 500; }
+  .field-group input { padding: 10px 16px; border: 1.5px solid #e0e0e0; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; min-width: 160px; }
+  .field-group input:focus { border-color: var(--lime); }
+
+  .btn-generate { padding: 11px 28px; background: var(--green); color: var(--lime); border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .btn-generate:hover { background: #0f2a1a; transform: translateY(-1px); }
+
+  .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 20px; }
+  .qr-card { background: var(--cream); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1.5px solid #e8e3d8; position: relative; transition: all 0.2s; }
+  .qr-card.redeemed { opacity: 0.5; border-color: #ccc; }
+  .qr-card.redeemed::after { content: '✓ USADO'; position: absolute; top: 10px; right: 10px; background: var(--orange); color: white; font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 100px; letter-spacing: 0.05em; }
+  .qr-id { font-size: 0.7rem; color: #999; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .qr-prize { font-size: 0.8rem; color: var(--green); font-weight: 600; text-align: center; line-height: 1.3; }
+  .qr-prize-emoji { font-size: 1.4rem; }
+  .qr-actions { display: flex; gap: 6px; margin-top: 4px; }
+  .btn-small { padding: 5px 12px; border-radius: 8px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .btn-redeem { background: var(--lime); color: var(--green); }
+  .btn-redeem:hover { background: #a8c63c; }
+  .btn-undo { background: #f3f4f6; color: #666; }
+  .btn-undo:hover { background: #e5e7eb; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+  .stat-box { background: var(--green); border-radius: 16px; padding: 20px; color: white; text-align: center; }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 2.5rem; color: var(--lime); line-height: 1; }
+  .stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 6px; }
+
+  .print-all-btn { padding: 11px 24px; background: var(--orange); color: white; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+  .print-all-btn:hover { background: #c94d22; }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 0.72rem; font-weight: 600; }
+  .badge-winner { background: #dcfce7; color: #166534; }
+  .badge-nope { background: #f3f4f6; color: #6b7280; }
+
+  .inner-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+  .inner-tab { padding: 7px 18px; border-radius: 100px; border: 1.5px solid #e0e0e0; background: white; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; color: #666; }
+  .inner-tab.active { background: var(--green); color: var(--lime); border-color: var(--green); }
+  .inner-view { display: none; }
+  .inner-view.active { display: block; }
+
+  .empty-state { text-align: center; padding: 48px; color: #aaa; }
+  .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.95rem; }
+
+  .url-info { background: #f0ebe0; border-radius: 12px; padding: 14px 18px; margin-top: 16px; font-size: 0.82rem; color: #666; line-height: 1.6; }
+  .url-info strong { color: var(--green); }
+  .url-info code { background: white; padding: 2px 6px; border-radius: 6px; font-size: 0.8rem; color: var(--green); }
+
+  @media print {
+    #login-screen, nav { display: none !important; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Manauara</div>
+    <p class="login-sub">Acesso restrito — equipa interna</p>
+    <input type="password" class="login-input" id="pwd-input" placeholder="Senha" onkeydown="if(event.key==='Enter') tryLogin()">
+    <button class="login-btn" onclick="tryLogin()">Entrar</button>
+    <p class="login-error" id="login-error">Senha incorreta. Tenta novamente.</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <nav>
+    <div class="logo">Manauara <span>— Painel Admin</span></div>
+    <button class="logout-btn" onclick="logout()">Sair ↩</button>
+  </nav>
+
+  <div class="admin">
+    <h1 class="admin-title">Painel de Controlo</h1>
+    <p class="admin-sub">Gere os prémios, gera os QR codes e acompanha os resgates.</p>
+
+    <!-- Stats -->
+    <div class="section-card">
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-num" id="stat-total">0</div><div class="stat-label">QR Codes Gerados</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-winners">0</div><div class="stat-label">Com Prémio</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-redeemed">0</div><div class="stat-label">Já Resgatados</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-pending">0</div><div class="stat-label">Por Resgatar</div></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="inner-tabs no-print">
+      <button class="inner-tab active" onclick="switchInner('prizes', this)">🎁 Prémios</button>
+      <button class="inner-tab" onclick="switchInner('generate', this)">✨ Gerar QR Codes</button>
+      <button class="inner-tab" onclick="switchInner('manage', this)">📋 Gerir Codes</button>
+    </div>
+
+    <!-- PRIZES -->
+    <div id="inner-prizes" class="inner-view active">
+      <div class="section-card">
+        <h2 class="section-title">Configurar Prémios</h2>
+        <div class="col-headers">
+          <span>Nome do Prémio</span><span>Emoji</span><span>Stock</span><span></span>
+        </div>
+        <div class="prizes-grid" id="prizes-grid"></div>
+        <button class="btn-add" onclick="addPrize()">+ Adicionar Prémio</button>
+      </div>
+    </div>
+
+    <!-- GENERATE -->
+    <div id="inner-generate" class="inner-view">
+      <div class="section-card">
+        <h2 class="section-title">Gerar QR Codes</h2>
+        <p style="font-size:0.9rem;color:#888;margin-bottom:20px;">Os prémios serão distribuídos aleatoriamente. Os cartões restantes ficam "sem prémio".</p>
+        <div class="gen-row">
+          <div class="field-group">
+            <label>Nº de cartões</label>
+            <input type="number" id="gen-qty" value="400" min="1" max="1000" style="width:140px">
+          </div>
+          <button class="btn-generate" onclick="generateQRCodes()">🎲 Gerar Cartões</button>
+        </div>
+        <div class="url-info">
+          <strong>Como funciona:</strong> cada QR code vai apontar para a página pública do teu site.<br>
+          Certifica-te que o ficheiro <code>index.html</code> está no mesmo repositório GitHub que este ficheiro.
+          O link público para os clientes será: <code>https://bdorialuna-ai.github.io/manauara-premios/</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- MANAGE -->
+    <div id="inner-manage" class="inner-view">
+      <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+          <h2 class="section-title" style="margin-bottom:0;border-bottom:none;padding-bottom:0;">QR Codes Gerados</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="print-all-btn" onclick="window.print()">🖨️ Imprimir Todos</button>
+            <button class="btn-generate" onclick="clearAll()" style="background:#ef4444;color:white;">🗑️ Limpar Tudo</button>
+          </div>
+        </div>
+        <!-- Search -->
+        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+          <div style="position:relative;flex:1;min-width:220px;">
+            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:1rem;">🔍</span>
+            <input type="text" id="search-code" placeholder="Pesquisar código (ex: MNR-0042-XXXX)" oninput="searchCode()" style="width:100%;padding:11px 14px 11px 40px;border:1.5px solid #e0e0e0;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;">
+          </div>
+          <div id="search-result-banner" style="display:none;padding:10px 18px;border-radius:12px;font-size:0.88rem;font-weight:600;"></div>
+        </div>
+        <div id="qr-grid" class="qr-grid"></div>
+        <div id="qr-empty" class="empty-state">
+          <div class="empty-icon">🎴</div>
+          <p>Ainda não geraste nenhum QR code.<br>Vai ao separador "Gerar QR Codes".</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== PASSWORD ==========
+const ADMIN_PASSWORD = 'manauara2025';
+
+function tryLogin() {
+  const val = document.getElementById('pwd-input').value;
+  if(val === ADMIN_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    loadData();
+    renderPrizes();
+    updateStats();
+    if(qrCodes.length > 0) renderQRGrid();
+  } else {
+    const card = document.querySelector('.login-card');
+    document.getElementById('login-error').style.display = 'block';
+    card.classList.remove('login-shake');
+    void card.offsetWidth;
+    card.classList.add('login-shake');
+    document.getElementById('pwd-input').value = '';
+  }
+}
+
+function logout() {
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('pwd-input').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+// ========== STATE ==========
+let prizes = [
+  { id: 1, name: "Pão de Queijo Grande", emoji: "🧀", stock: 15 },
+  { id: 2, name: "Cone de Pão de Queijo", emoji: "🍦", stock: 15 },
+  { id: 3, name: "Waffle PQ Nutella e Morango", emoji: "🧇", stock: 15 },
+  { id: 4, name: "Açaí Pequeno", emoji: "🫐", stock: 10 },
+  { id: 5, name: "Smoothie à escolha", emoji: "🥤", stock: 20 },
+  { id: 6, name: "1 Ano de Açaí Grátis 👑", emoji: "👑", stock: 1 },
+  { id: 7, name: "Waffle PQ Banana e Doce de Leite", emoji: "🍌", stock: 15 },
+  { id: 8, name: "Café à escolha", emoji: "☕", stock: 5 },
+  { id: 9, name: "Panini de Pão de Queijo", emoji: "🥪", stock: 10 },
+  { id: 10, name: "Guaraná Antarctica", emoji: "🥤", stock: 5 },
+  { id: 11, name: "Açaí Médio", emoji: "🫐", stock: 5 },
+  { id: 12, name: "Açaí Grande", emoji: "🫐", stock: 2 },
+  { id: 13, name: "Sumo à escolha", emoji: "🧃", stock: 15 },
+  { id: 14, name: "Combo Waffle PQ + Cappuccino", emoji: "☕", stock: 10 },
+  { id: 15, name: "Combo Expresso + Pão de Queijo", emoji: "☕", stock: 7 },
+];
+let nextPrizeId = 16;
+let qrCodes = [];
+
+// ========== INNER TABS ==========
+function switchInner(tab, btn) {
+  document.querySelectorAll('.inner-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.inner-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById('inner-' + tab).classList.add('active');
+  if(btn) btn.classList.add('active');
+}
+
+// ========== PRIZES ==========
+function renderPrizes() {
+  document.getElementById('prizes-grid').innerHTML = prizes.map(p => `
+    <div class="prize-row">
+      <input type="text" value="${p.name}" placeholder="Nome do prémio" onchange="updatePrize(${p.id},'name',this.value)">
+      <input type="text" value="${p.emoji}" placeholder="🎁" onchange="updatePrize(${p.id},'emoji',this.value)" style="text-align:center;font-size:1.2rem">
+      <input type="number" value="${p.stock}" min="1" onchange="updatePrize(${p.id},'stock',parseInt(this.value))">
+      <button class="btn-icon btn-remove" onclick="removePrize(${p.id})">×</button>
+    </div>
+  `).join('');
+}
+
+function addPrize() {
+  prizes.push({ id: nextPrizeId++, name: "", emoji: "🎁", stock: 5 });
+  renderPrizes(); saveData();
+}
+function removePrize(id) {
+  prizes = prizes.filter(p => p.id !== id);
+  renderPrizes(); saveData();
+}
+function updatePrize(id, field, val) {
+  const p = prizes.find(p => p.id === id);
+  if(p) { p[field] = val; saveData(); }
+}
+
+// ========== GENERATE ==========
+function generateQRCodes() {
+  const qty = parseInt(document.getElementById('gen-qty').value);
+  if(qty < 1 || qty > 1000) { alert('Quantidade entre 1 e 1000.'); return; }
+
+  const baseUrl = 'https://bdorialuna-ai.github.io/manauara-premios/';
+
+  let pool = [];
+  prizes.forEach(p => {
+    for(let i = 0; i < p.stock; i++) pool.push({ name: p.name, emoji: p.emoji });
+  });
+  // Shuffle
+  for(let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  qrCodes = [];
+  for(let i = 0; i < qty; i++) {
+    const code = 'MNR-' + String(i+1).padStart(4,'0') + '-' + Math.random().toString(36).substring(2,6).toUpperCase();
+    const prize = pool[i] || null;
+    qrCodes.push({ id: i+1, code, prize, redeemed: false, baseUrl });
+  }
+
+  saveData(); updateStats(); renderQRGrid();
+  switchInner('manage', document.querySelectorAll('.inner-tab')[2]);
+}
+
+// ========== QR GRID ==========
+function renderQRGrid() {
+  const grid = document.getElementById('qr-grid');
+  const empty = document.getElementById('qr-empty');
+  if(qrCodes.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  grid.innerHTML = qrCodes.map(qr => {
+    const url = `${qr.baseUrl}?code=${qr.code}&prize=${encodeURIComponent(qr.prize ? qr.prize.name : 'none')}&emoji=${encodeURIComponent(qr.prize ? qr.prize.emoji : '')}`;
+    return `
+      <div class="qr-card ${qr.redeemed ? 'redeemed' : ''}" id="card-${qr.id}">
+        <div class="qr-id">#${String(qr.id).padStart(4,'0')}</div>
+        <div id="qrcode-${qr.id}" style="width:120px;height:120px"></div>
+        <div class="qr-prize-emoji">${qr.prize ? qr.prize.emoji : '❌'}</div>
+        <div class="qr-prize">${qr.prize ? qr.prize.name : 'Sem Prémio'}</div>
+        <span class="badge ${qr.prize ? 'badge-winner' : 'badge-nope'}">${qr.prize ? '🏆 Prémio' : '😔 Sem sorte'}</span>
+        <div class="qr-actions">
+          ${!qr.redeemed
+            ? `<button class="btn-small btn-redeem" onclick="redeemCode(${qr.id})">✓ Resgatado</button>`
+            : `<button class="btn-small btn-undo" onclick="undoRedeem(${qr.id})">↩ Desfazer</button>`}
+        </div>
+        <div class="qr-id" style="color:#bbb;font-size:0.65rem">${qr.code}</div>
+      </div>
+    `;
+  }).join('');
+
+  qrCodes.forEach(qr => {
+    const url = `${qr.baseUrl}?code=${qr.code}&prize=${encodeURIComponent(qr.prize ? qr.prize.name : 'none')}&emoji=${encodeURIComponent(qr.prize ? qr.prize.emoji : '')}`;
+    try {
+      new QRCode(document.getElementById('qrcode-' + qr.id), {
+        text: url, width: 120, height: 120,
+        colorDark: '#1a3a2a', colorLight: '#f7f2e8',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } catch(e) {}
+  });
+}
+
+function redeemCode(id) {
+  const qr = qrCodes.find(q => q.id === id);
+  if(qr) { qr.redeemed = true; }
+  saveData(); updateStats(); renderQRGrid();
+  const term = document.getElementById('search-code').value.trim();
+  if(term) searchCode();
+}
+function undoRedeem(id) {
+  const qr = qrCodes.find(q => q.id === id);
+  if(qr) { qr.redeemed = false; }
+  saveData(); updateStats(); renderQRGrid();
+  const term = document.getElementById('search-code').value.trim();
+  if(term) searchCode();
+}
+function clearAll() {
+  if(confirm('Tens a certeza? Apaga todos os QR codes.')) {
+    qrCodes = []; saveData(); updateStats(); renderQRGrid();
+  }
+}
+
+// ========== SEARCH ==========
+function searchCode() {
+  const term = document.getElementById('search-code').value.trim().toUpperCase();
+  const banner = document.getElementById('search-result-banner');
+  const cards = document.querySelectorAll('.qr-card');
+  if(!term) {
+    cards.forEach(c => { c.style.display = ''; c.style.outline = ''; });
+    banner.style.display = 'none'; return;
+  }
+  let found = null;
+  cards.forEach(c => {
+    const codeEl = c.querySelector('.qr-id:last-child');
+    if(codeEl && codeEl.textContent.toUpperCase().includes(term)) {
+      c.style.display = ''; c.style.outline = '3px solid #b5d44a';
+      c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      found = qrCodes.find(q => q.code.toUpperCase().includes(term));
+    } else { c.style.display = 'none'; c.style.outline = ''; }
+  });
+  banner.style.display = 'block';
+  if(found) {
+    if(found.redeemed) { banner.style.background='#fee2e2'; banner.style.color='#b91c1c'; banner.textContent='✓ Este código já foi resgatado.'; }
+    else if(found.prize) { banner.style.background='#dcfce7'; banner.style.color='#166534'; banner.textContent='🏆 Prémio válido: '+found.prize.name; }
+    else { banner.style.background='#f3f4f6'; banner.style.color='#6b7280'; banner.textContent='😔 Sem prémio associado.'; }
+  } else { banner.style.background='#fee2e2'; banner.style.color='#b91c1c'; banner.textContent='❌ Código não encontrado.'; }
+}
+
+// ========== STATS ==========
+function updateStats() {
+  document.getElementById('stat-total').textContent = qrCodes.length;
+  document.getElementById('stat-winners').textContent = qrCodes.filter(q => q.prize).length;
+  document.getElementById('stat-redeemed').textContent = qrCodes.filter(q => q.redeemed).length;
+  document.getElementById('stat-pending').textContent = qrCodes.filter(q => !q.redeemed && q.prize).length;
+}
+
+// ========== LOCALSTORAGE ==========
+function saveData() {
+  try {
+    localStorage.setItem('manauara_prizes', JSON.stringify(prizes));
+    localStorage.setItem('manauara_qrcodes', JSON.stringify(qrCodes));
+    localStorage.setItem('manauara_nextPrizeId', String(nextPrizeId));
+  } catch(e) {}
+}
+function loadData() {
+  try {
+    const p = localStorage.getItem('manauara_prizes');
+    const q = localStorage.getItem('manauara_qrcodes');
+    const n = localStorage.getItem('manauara_nextPrizeId');
+    if(p) prizes = JSON.parse(p);
+    if(q) qrCodes = JSON.parse(q);
+    if(n) nextPrizeId = parseInt(n);
+  } catch(e) {}
+}
+</script>
+</body>
+</html>
