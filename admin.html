@@ -211,8 +211,19 @@
 <div id="app-screen">
   <nav>
     <div class="logo">Manauara <span>— Painel Admin</span></div>
-    <button class="logout-btn" onclick="logout()">Sair ↩</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <label style="padding:7px 16px;border-radius:100px;background:var(--lime);color:var(--green);font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer;">
+        📂 Restaurar Backup
+        <input type="file" accept=".json" onchange="importBackup(event)" style="display:none">
+      </label>
+      <button onclick="exportBackup()" style="padding:7px 16px;border-radius:100px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:white;font-family:'DM Sans',sans-serif;font-size:0.8rem;cursor:pointer;">💾 Guardar Backup</button>
+      <button class="logout-btn" onclick="logout()">Sair ↩</button>
+    </div>
   </nav>
+
+  <div style="background:#fef3c7;border-bottom:2px solid #fcd34d;padding:12px 32px;font-size:0.85rem;color:#92400e;">
+    ⚠️ <strong>Importante:</strong> Após gerares os QR codes, guarda sempre o backup em local seguro (Google Drive, email). O browser pode apagar os dados a qualquer momento.
+  </div>
 
   <div class="admin">
     <h1 class="admin-title">Painel de Controlo</h1>
@@ -379,6 +390,39 @@ function updatePrize(id, field, val) {
   if(p) { p[field] = val; saveData(); }
 }
 
+// ========== EXPORT / IMPORT ==========
+function exportBackup() {
+  const data = { prizes, qrCodes, nextPrizeId, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'manauara-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(e) {
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!data.qrCodes) { alert('Ficheiro inválido.'); return; }
+      const dateStr = data.exportedAt ? new Date(data.exportedAt).toLocaleString('pt-PT') : 'data desconhecida';
+      if(!confirm('Importar backup de ' + dateStr + ' com ' + data.qrCodes.length + ' QR codes?\n\nIsto vai substituir os dados atuais.')) return;
+      prizes = data.prizes || prizes;
+      qrCodes = data.qrCodes;
+      nextPrizeId = data.nextPrizeId || 16;
+      saveData(); renderPrizes(); updateStats(); renderQRGrid();
+      alert('✅ Backup importado com sucesso! ' + qrCodes.length + ' QR codes recuperados.');
+    } catch(err) { alert('Erro ao ler o ficheiro. Certifica-te que é um backup válido.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
 // ========== GENERATE ==========
 function generateQRCodes() {
   const qty = parseInt(document.getElementById('gen-qty').value);
@@ -390,7 +434,6 @@ function generateQRCodes() {
   prizes.forEach(p => {
     for(let i = 0; i < p.stock; i++) pool.push({ name: p.name, emoji: p.emoji });
   });
-  // Shuffle
   for(let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -405,6 +448,12 @@ function generateQRCodes() {
 
   saveData(); updateStats(); renderQRGrid();
   switchInner('manage', document.querySelectorAll('.inner-tab')[2]);
+
+  // Auto-export backup immediately
+  setTimeout(() => {
+    exportBackup();
+    alert('✅ ' + qty + ' QR codes gerados!\n\n⚠️ IMPORTANTE: Um ficheiro de backup foi descarregado automaticamente.\n\nGuarda esse ficheiro num lugar seguro (Google Drive, email, etc). Se o browser apagar os dados, consegues recuperar tudo a partir dele.');
+  }, 500);
 }
 
 // ========== QR GRID ==========
